@@ -1,0 +1,2 @@
+# wexcom
+Cryptocurrencies loader
