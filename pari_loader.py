@@ -26,7 +26,7 @@ print(urls)
 # we need that function
 async def await_get_and_store(ticker, ticker_url, depth_url):
 
-    print('await_get_and_store', ticker)
+    #print('await_get_and_store', ticker)
     loop = asyncio.get_event_loop()
     task1 = loop.create_task(load_ticker(ticker, ticker_url,loop))
     task2 = loop.create_task(load_depth(ticker, depth_url, loop))
@@ -39,7 +39,7 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
     idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id)
     idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id)
     await asyncio.wait([idx_task1, idx_task2], loop=loop)
-    print('await_get_and_store', 'done')
+    print('save ', ticker, doc_id, 'done')
 
 # we need this function
 async def index_doc(index, doc_type, doc, doc_id):
@@ -65,12 +65,12 @@ def slack(msg):
 
 # we need this function
 async def load_ticker(ticker, ticker_url, loop):
-    print(f'ticker {ticker} GET')
+    #print(f'ticker {ticker} GET')
     try:
         connector = aiohttp.TCPConnector(ssl=False)
         async with aiohttp.ClientSession(connector=connector) as session:
             response = await fetch(session, ticker_url)
-        print(f'ticker {ticker} JSON')
+        #print(f'ticker {ticker} JSON')
         ticker_json = json.loads(response)
         ticker_doc = ticker_json[ticker]
         ticker_doc_id = ticker_doc['updated']
@@ -81,7 +81,7 @@ async def load_ticker(ticker, ticker_url, loop):
         slack(f"wex depth error {ticker}: {msg}")
 
 async def load_depth(ticker, depth_url, loop):
-    print(f'depth {ticker} GET')
+    #print(f'depth {ticker} GET')
     try:
         connector = aiohttp.TCPConnector(ssl=False)
         async with aiohttp.ClientSession(connector=connector) as session:
