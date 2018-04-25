@@ -24,7 +24,7 @@ urls = [(p, tickers.format(p),depth.format(p)) for p in doc.keys()]
 print(urls)
 
 # we need that function
-async def await_get_and_store(ticker, ticker_url, depth_url):
+async def await_get_and_store(ticker, ticker_url, depth_url,last_doc_id, n):
 
     #print('await_get_and_store', ticker)
     loop = asyncio.get_event_loop()
@@ -36,10 +36,16 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
     #await asyncio.sleep(0.0001)
     ticker_doc, doc_id, depth_doc = (res1[0],res1[1],res2)
 
-    idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id)
-    idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id)
+    n=n
+    if last_doc_id == doc_id:
+        n+=1
+    else:
+        n=0
+    idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id*10+n)
+    idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id*10+n)
     await asyncio.wait([idx_task1, idx_task2], loop=loop)
-    print('save ', ticker, doc_id, 'done')
+    print('save ', ticker,  doc_id*10+n, 'done')
+    return doc_id,n
 
 # we need this function
 async def index_doc(index, doc_type, doc, doc_id):
@@ -95,9 +101,11 @@ async def load_depth(ticker, depth_url, loop):
         slack(f"wex ticker error {ticker}: {ex}")
 
 async def main():
+    dic_id, n = (0,0)
     while True:
-        task1 = loop.create_task(await_get_and_store(urls[0][0], urls[0][1], urls[0][2]))
+        task1 = loop.create_task(await_get_and_store(urls[0][0], urls[0][1], urls[0][2], dic_id, n))
         await asyncio.wait([task1])
+        dic_id, n = task1.result()
 
 #loop.set_debug(1)
 loop = asyncio.get_event_loop_policy().new_event_loop()
