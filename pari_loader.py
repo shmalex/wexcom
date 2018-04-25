@@ -67,7 +67,8 @@ def slack(msg):
 async def load_ticker(ticker, ticker_url, loop):
     print(f'ticker {ticker} GET')
     try:
-        async with aiohttp.ClientSession() as session:
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             response = await fetch(session, ticker_url)
         print(f'ticker {ticker} JSON')
         ticker_json = json.loads(response)
