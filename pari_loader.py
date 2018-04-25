@@ -43,7 +43,7 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
 
 # we need this function
 async def index_doc(index, doc_type, doc, doc_id):
-    print(index, doc_id)
+    #print(index, doc_type, doc, doc_id)
     await asyncio.sleep(0.0001)
     res = es.index(index, doc_type, doc, doc_id)
     return res
@@ -77,13 +77,13 @@ async def load_ticker(ticker, ticker_url, loop):
     except Exception as ex:
         msg = str(ex)
         print('load_ticker error',type(ex),msg)
-        slack(f'ticker {ticker}: {msg}')
+        slack(f"wex depth error {ticker}: {msg}")
 
-# we need this function
 async def load_depth(ticker, depth_url, loop):
     print(f'depth {ticker} GET')
     try:
-        async with aiohttp.ClientSession() as session:
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             response = await fetch(session, depth_url)
         depth_json = json.loads(response)
         depth_doc = depth_json[ticker]
@@ -91,7 +91,7 @@ async def load_depth(ticker, depth_url, loop):
     except Exception as ex:
         msg = str(ex)
         print('load_depth error', type(ex),msg)
-        slack(f"wex ticker error {ticker}: {msg}")
+        slack(f"wex ticker error {ticker}: {ex}")
 
 async def main():
     while True:
