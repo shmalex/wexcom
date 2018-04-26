@@ -106,7 +106,7 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
         await asyncio.sleep(0.0001)
         ticker_doc, doc_id, depth_doc = (res1[0],res1[1],res2)
 
-        print(ticker, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id)))
+        #print(ticker, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id)))
         ticker_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
         depth_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
         idx_task1 = index_doc(f"{prefix}ticker_{ticker}", 'ticker', ticker_doc, doc_id)
