@@ -21,31 +21,29 @@ doc = prices['pairs']
 
 urls = [(p, tickers.format(p),depth.format(p)) for p in doc.keys()]
 
-print(urls)
+print(doc.keys())
 
 # we need that function
-async def await_get_and_store(ticker, ticker_url, depth_url,last_doc_id, n):
+async def await_get_and_store(ticker, ticker_url, depth_url):
+    try:
+        #print('await_get_and_store', ticker)
+        loop = asyncio.get_event_loop()
+        task1 = loop.create_task(load_ticker(ticker, ticker_url,loop))
+        task2 = loop.create_task(load_depth(ticker, depth_url, loop))
+        await asyncio.wait([task1, task2], loop=loop)
+        res1  =task1.result()
+        res2  =task2.result()
+        await asyncio.sleep(0.0001)
+        ticker_doc, doc_id, depth_doc = (res1[0],res1[1],res2)
 
-    #print('await_get_and_store', ticker)
-    loop = asyncio.get_event_loop()
-    task1 = loop.create_task(load_ticker(ticker, ticker_url,loop))
-    task2 = loop.create_task(load_depth(ticker, depth_url, loop))
-    await asyncio.wait([task1, task2], loop=loop)
-    res1  =task1.result()
-    res2  =task2.result()
-    #await asyncio.sleep(0.0001)
-    ticker_doc, doc_id, depth_doc = (res1[0],res1[1],res2)
-
-    n=n
-    if last_doc_id == doc_id:
-        n+=1
-    else:
-        n=0
-    idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id*10+n)
-    idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id*10+n)
-    await asyncio.wait([idx_task1, idx_task2], loop=loop)
-    print('save ', ticker,  doc_id*10+n, 'done')
-    return doc_id,n
+        idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id)
+        idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id)
+        await asyncio.wait([idx_task1, idx_task2], loop=loop)
+        #print('save ', ticker,  doc_id, 'done')
+        #return doc_id
+    except  Exception as ex:
+        print('sheet happend')
+        #return 0
 
 # we need this function
 async def index_doc(index, doc_type, doc, doc_id):
@@ -82,9 +80,10 @@ async def load_ticker(ticker, ticker_url, loop):
         ticker_doc_id = ticker_doc['updated']
         return (ticker_doc, ticker_doc_id)
     except Exception as ex:
-        msg = str(ex)
+        msg = str(ex) + ' ' + str(type(ex))
         print('load_ticker error',type(ex),msg)
         slack(f"wex depth error {ticker}: {msg}")
+        raise ex
 
 async def load_depth(ticker, depth_url, loop):
     #print(f'depth {ticker} GET')
@@ -96,19 +95,33 @@ async def load_depth(ticker, depth_url, loop):
         depth_doc = depth_json[ticker]
         return depth_doc
     except Exception as ex:
-        msg = str(ex)
+        msg = str(ex) + ' ' + str(type(ex))
         print('load_depth error', type(ex),msg)
         slack(f"wex ticker error {ticker}: {ex}")
+        raise ex
 
-async def main():
-    dic_id, n = (0,0)
+def handler(loop, context):
+    print('handler loop',loop)
+    print('handler context',context)
+    slack(f"handler loop:{loop}")
+    slack(f"handler context:{context}")
+def main():
+    count=0
     while True:
-        task1 = loop.create_task(await_get_and_store(urls[0][0], urls[0][1], urls[0][2], dic_id, n))
-        await asyncio.wait([task1])
-        dic_id, n = task1.result()
+        try:
+            tasks = asyncio.gather(*[await_get_and_store(u[0], u[1], u[2]) for u in urls])
+            results = loop.run_until_complete(tasks)
+            print(f'{count}')
+            count += 1
+        except Exception as ex:
+            msg = str(ex) + ' ' + str(type(ex))
+            print('load_depth error', type(ex),msg)
+            slack(f"wex ticker error {ticker}: {ex}")
 
-#loop.set_debug(1)
 loop = asyncio.get_event_loop_policy().new_event_loop()
-main = loop.create_task(main())
+asyncio.set_event_loop(loop)
+#loop.set_debug(1)
+loop.set_exception_handler(handler)
+main()
 loop.run_forever()
 loop.close()
