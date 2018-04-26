@@ -81,8 +81,8 @@ async def load_ticker(ticker, ticker_url, loop):
         return (ticker_doc, ticker_doc_id)
     except Exception as ex:
         msg = str(ex) + ' ' + str(type(ex))
-        print('load_ticker error',type(ex),msg)
-        slack(f"wex depth error {ticker}: {msg}")
+        print('load_ticker error',msg)
+        slack(f"wex ticker error {ticker}: {msg}")
         raise ex
 
 async def load_depth(ticker, depth_url, loop):
@@ -96,8 +96,8 @@ async def load_depth(ticker, depth_url, loop):
         return depth_doc
     except Exception as ex:
         msg = str(ex) + ' ' + str(type(ex))
-        print('load_depth error', type(ex),msg)
-        slack(f"wex ticker error {ticker}: {ex}")
+        print('load_depth error',msg)
+        slack(f"wex depth error {ticker}: {msg}")
         raise ex
 
 def handler(loop, context):
