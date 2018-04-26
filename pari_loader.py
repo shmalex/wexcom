@@ -183,7 +183,7 @@ def main():
     count=0
     while True:
         try:
-            tasks = asyncio.gather(*[await_get_and_store(u[0], u[1], u[2]) for u in urls[:5]])
+            tasks = asyncio.gather(*[await_get_and_store(u[0], u[1], u[2]) for u in urls])
             results = loop.run_until_complete(tasks)
             print(f'{count}')
             count += 1
