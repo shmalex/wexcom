@@ -9,7 +9,9 @@ import async_timeout
 import numpy as np
 import requests as rq
 import json
+import os
 import time
+
 es = Elasticsearch(["10.11.26.54"])
 tickers = 'https://wex.nz/api/3/ticker/{0}'
 depth = 'https://wex.nz/api/3/depth/{0}'
@@ -77,6 +79,13 @@ mapping_ticker = '''
     }
 }
 '''
+
+def create_dirs(urls):
+    for url in urls:
+        ticker = url[0]
+        os.makedirs(os.path.join('data',f'{ticker}','ticker'), exist_ok=True)
+        os.makedirs(os.path.join('data',f'{ticker}','depth'), exist_ok=True)
+
 def create_indeces(es, urls):
     for url in urls:
         ticker = url[0]
@@ -109,14 +118,21 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
         #print(ticker, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id)))
         ticker_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
         depth_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
-        idx_task1 = index_doc(f"{prefix}ticker_{ticker}", 'ticker', ticker_doc, doc_id)
-        idx_task2 = index_doc(f"{prefix}depth_{ticker}", 'depth', depth_doc, doc_id)
-        await asyncio.wait([idx_task1, idx_task2], loop=loop)
+        dump(ticker, 'ticker', ticker_doc, doc_id)
+        dump(ticker, 'depth', depth_doc, doc_id)
+
+        #idx_task1 = index_doc(f"{prefix}ticker_{ticker}", 'ticker', ticker_doc, doc_id)
+        #idx_task2 = index_doc(f"{prefix}depth_{ticker}", 'depth', depth_doc, doc_id)
+        #await asyncio.wait([idx_task1, idx_task2], loop=loop)
         #print('save ', ticker,  doc_id, 'done')
         #return doc_id
     except  Exception as ex:
         print('sheet happend')
         #return 0
+
+def dump(ticker, doc_type, doc, doc_id):
+    with open(os.path.join(f'data',f'{ticker}', f'{doc_type}', f'{doc_id}.txt'), 'w') as outfile:
+        json.dump(doc, outfile)
 
 # we need this function
 async def index_doc(index, doc_type, doc, doc_id):
@@ -191,7 +207,7 @@ def main():
             msg = str(ex) + ' ' + str(type(ex))
             print('load_depth error', type(ex),msg)
             slack(f"wex ticker error {ticker}: {ex}")
-create_indeces(es, urls)
+create_dirs(urls)
 loop = asyncio.get_event_loop_policy().new_event_loop()
 asyncio.set_event_loop(loop)
 #loop.set_debug(1)
