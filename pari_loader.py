@@ -9,11 +9,81 @@ import async_timeout
 import numpy as np
 import requests as rq
 import json
-
+import time
 es = Elasticsearch(["10.11.26.54"])
 tickers = 'https://wex.nz/api/3/ticker/{0}'
 depth = 'https://wex.nz/api/3/depth/{0}'
 resp = rq.get(url = 'https://wex.nz/api/3/info')
+prefix = ''
+mapping_depth = '''
+{
+"mappings": {
+      "depth": {
+        "properties": {
+          "asks": {
+            "type": "float"
+          },
+          "bids": {
+            "type": "float"
+          },
+          "datetime": {
+            "type":"date",
+            "format":"yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      }
+    }
+}
+'''
+mapping_ticker = '''
+{
+"mappings": {
+      "ticker": {
+        "properties": {
+          "avg": {
+            "type": "float"
+          },
+          "buy": {
+            "type": "long"
+          },
+          "datetime": {
+            "type":"date",
+            "format":"yyyy-MM-dd HH:mm:ss"
+          },
+          "high": {
+            "type": "long"
+          },
+          "last": {
+            "type": "float"
+          },
+          "low": {
+            "type": "float"
+          },
+          "sell": {
+            "type": "float"
+          },
+          "updated": {
+            "type": "date",
+            "format": "epoch_millis"
+          },
+          "vol": {
+            "type": "float"
+          },
+          "vol_cur": {
+            "type": "float"
+          }
+        }
+      }
+    }
+}
+'''
+def create_indeces(es, urls):
+    for url in urls:
+        ticker = url[0]
+        if (es.indices.exists(f'{prefix}ticker_{ticker}') == False):
+            es.indices.create(index=f'{prefix}ticker_{ticker}', ignore=400, body=json.loads(mapping_ticker))
+        if (es.indices.exists(f'{prefix}depth_{ticker}') == False):
+            es.indices.create(index=f'{prefix}depth_{ticker}', ignore=400, body=json.loads(mapping_depth))
 
 prices = json.loads(resp.content)
 
@@ -36,8 +106,11 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
         await asyncio.sleep(0.0001)
         ticker_doc, doc_id, depth_doc = (res1[0],res1[1],res2)
 
-        idx_task1 = index_doc(f"ticker_{ticker}", 'ticker', ticker_doc, doc_id)
-        idx_task2 = index_doc(f"depth_{ticker}", 'depth', depth_doc, doc_id)
+        print(ticker, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id)))
+        ticker_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
+        depth_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(doc_id))
+        idx_task1 = index_doc(f"{prefix}ticker_{ticker}", 'ticker', ticker_doc, doc_id)
+        idx_task2 = index_doc(f"{prefix}depth_{ticker}", 'depth', depth_doc, doc_id)
         await asyncio.wait([idx_task1, idx_task2], loop=loop)
         #print('save ', ticker,  doc_id, 'done')
         #return doc_id
@@ -77,6 +150,7 @@ async def load_ticker(ticker, ticker_url, loop):
         #print(f'ticker {ticker} JSON')
         ticker_json = json.loads(response)
         ticker_doc = ticker_json[ticker]
+        ticker_doc['datetime'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(1524771604+60*60*3))
         ticker_doc_id = ticker_doc['updated']
         return (ticker_doc, ticker_doc_id)
     except Exception as ex:
@@ -109,7 +183,7 @@ def main():
     count=0
     while True:
         try:
-            tasks = asyncio.gather(*[await_get_and_store(u[0], u[1], u[2]) for u in urls])
+            tasks = asyncio.gather(*[await_get_and_store(u[0], u[1], u[2]) for u in urls[:5]])
             results = loop.run_until_complete(tasks)
             print(f'{count}')
             count += 1
@@ -117,7 +191,7 @@ def main():
             msg = str(ex) + ' ' + str(type(ex))
             print('load_depth error', type(ex),msg)
             slack(f"wex ticker error {ticker}: {ex}")
-
+create_indeces(es, urls)
 loop = asyncio.get_event_loop_policy().new_event_loop()
 asyncio.set_event_loop(loop)
 #loop.set_debug(1)
