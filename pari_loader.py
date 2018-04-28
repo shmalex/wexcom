@@ -84,7 +84,7 @@ def create_dirs(urls):
     for url in urls:
         ticker = url[0]
         os.makedirs(os.path.join('data',f'{ticker}','ticker'), exist_ok=True)
-        os.makedirs(os.path.join('data',f'{ticker}','depth'), exist_ok=True)
+        os.makedirs(os.path.join(f'{ticker}','depth'), exist_ok=True)
 
 def create_indeces(es, urls):
     for url in urls:
@@ -148,13 +148,14 @@ async def fetch(session, url):
             return await response.text()
 
 def slack(msg):
-    payload = json.dumps({"text": msg})
+    pass
+    '''payload = json.dumps({"text": msg})
     SLACK = "https://hooks.slack.com/services/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"
     r = rq.post(
         SLACK,
         data=payload,
         headers={'Content-Type': 'application/json'}
-    )
+    )'''
 
 # we need this function
 async def load_ticker(ticker, ticker_url, loop):
