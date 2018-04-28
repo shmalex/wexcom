@@ -12,7 +12,7 @@ import json
 import os
 import time
 
-es = Elasticsearch(["10.11.26.54"])
+#es = Elasticsearch(["10.11.26.54"])
 tickers = 'https://wex.nz/api/3/ticker/{0}'
 depth = 'https://wex.nz/api/3/depth/{0}'
 resp = rq.get(url = 'https://wex.nz/api/3/info')
@@ -83,8 +83,8 @@ mapping_ticker = '''
 def create_dirs(urls):
     for url in urls:
         ticker = url[0]
-        os.makedirs(os.path.join('data',f'{ticker}','ticker'), exist_ok=True)
-        os.makedirs(os.path.join(f'{ticker}','depth'), exist_ok=True)
+        os.makedirs(os.path.join('data',ticker,'ticker'), exist_ok=True)
+        os.makedirs(os.path.join('data',ticker,'depth'), exist_ok=True)
 
 def create_indeces(es, urls):
     for url in urls:
@@ -127,6 +127,7 @@ async def await_get_and_store(ticker, ticker_url, depth_url):
         #print('save ', ticker,  doc_id, 'done')
         #return doc_id
     except  Exception as ex:
+        print(ex)
         print('sheet happend')
         #return 0
 
@@ -148,7 +149,7 @@ async def fetch(session, url):
             return await response.text()
 
 def slack(msg):
-    pass
+    return None
     '''payload = json.dumps({"text": msg})
     SLACK = "https://hooks.slack.com/services/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"
     r = rq.post(
